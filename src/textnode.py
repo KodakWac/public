@@ -1,5 +1,6 @@
 from enum import Enum
 from htmlnode import LeafNode
+from markdown_extract import *
 
 class TextType(Enum):
     PLAIN = "plain"
@@ -53,3 +54,65 @@ def text_node_to_html_node(text_node):
     if text_node.text_type == TextType.IMAGE:
         node = LeafNode("img", "", {"src": text_node.url, "alt": text_node.text})
         return node
+
+
+def split_nodes_image(old_nodes):
+    new_list = []
+    for node in old_nodes:
+
+        if node.text_type != TextType.PLAIN:
+            new_list.append(node)
+        else:
+            images = extract_markdown_images(node)  
+            if not images:
+                new_list.append(node)
+            else:
+           
+                remaining_text = node.text  
+                for image_alt, image_link in images:  
+                    parts = remaining_text.split(f"![{image_alt}]({image_link})", 1)
+
+               
+                    if parts[0].strip():
+                        new_list.append(TextNode(parts[0], TextType.PLAIN))
+                
+                    new_list.append(TextNode(image_alt, TextType.IMAGE, image_link))
+                
+                    remaining_text = parts[1]
+                
+                if remaining_text.strip():
+                    new_list.append(TextNode(remaining_text, TextType.PLAIN))
+
+    return new_list
+
+def split_nodes_links(old_nodes):
+    new_list = []
+
+    for node in old_nodes:
+        if node.text_type != TextType.PLAIN:
+            new_list.append(node)
+        else:
+            links = extract_markdown_links(node)
+            if not links:
+                new_list.append(node)
+            else:
+                remaining_text = node.text
+                for link_text, link_url in links:
+                    parts = remaining_text.split(f"[{link_text}]({link_url})", 1)
+
+                    if parts[0].strip():
+                        new_list.append(TextNode(parts[0], TextType.PLAIN))
+
+                    new_list.append(TextNode(link_text, TextType.LINK, link_url))
+                
+                    remaining_text = parts[1]
+                
+                if remaining_text.strip():
+                    new_list.append(TextNode(remaining_text, TextType.PLAIN))
+
+    return new_list
+
+
+
+
+
